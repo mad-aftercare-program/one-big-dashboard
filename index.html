@@ -420,7 +420,7 @@ body.noscroll{overflow:hidden}
 .hero .hr1{display:flex;gap:18px;align-items:center}.rankbig{font:700 clamp(3rem,13vw,4.4rem)/1 var(--f-head);color:#202124}.rankbig small{font:700 1.1rem var(--f-body);color:#5A5A5F}
 .st.low{background:#FBE1E7;color:#B0002B}
 .tpc{border-top:8px solid var(--tc);padding-top:14px}.tph{display:flex;gap:12px;align-items:center}.tpi{width:46px;height:46px;border-radius:14px;background:var(--tt);display:grid;place-items:center;color:var(--tc);flex:none}.tpi svg{width:24px;height:24px}
-.tpbig{font:700 clamp(2.4rem,9vw,3.2rem)/1.05 var(--f-head);margin:12px 0 4px}.cname{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;font-weight:700}.cname input{width:100%}.frexp{display:flex;justify-content:flex-end;margin:-4px 0 12px}.tpline{margin:6px 0 4px}
+.tpbig{font:700 clamp(2.4rem,9vw,3.2rem)/1.05 var(--f-head);margin:12px 0 4px}.cname{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;font-weight:700}.cname input{width:100%}.frexp{display:flex;align-items:flex-end;justify-content:flex-end;flex:0 1 auto;margin-left:auto}.frexp .shbtn{min-height:46px}.tpline{margin:6px 0 4px}
 .ladder{margin-top:10px}.lad-track{position:relative;height:84px;border-radius:16px;background:linear-gradient(90deg,var(--tt),#fff);border:1px solid #EFE8D9;overflow:hidden}
 .lad-flag{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed #202124;opacity:.75}.lad-flag em{position:absolute;top:4px;left:6px;font-style:normal;font-size:.7rem;font-weight:800;white-space:nowrap;color:#202124;background:rgba(255,255,255,.8);padding:0 4px;border-radius:4px}
 .lad-flag.rl em{left:auto;right:6px}
@@ -1675,8 +1675,8 @@ function rankingYear(){return D.chapters.map(c=>{const y=yearPts(c);return{ch:c,
 function rankList(m){return m==="all"?rankingYear().map(x=>({ch:x.ch,pe:x.pe,pp:x.pp})):ranking(m).map(x=>({ch:x.r.ch,pe:x.pe,pp:x.pp,r:x.r}))}
 const ptsWord=(e,p)=>`${fmtPts(e)} of ${fmtPts(p)} point${p===1?"":"s"}`;
 
-function frFilters(withChapter,withAll){const ms=MONTHS.filter(x=>x<=CUR);
-  return `<div class="card filters"><label class="fl"><span>Month</span><select data-af="month" aria-label="Month">${withAll?`<option value="all" ${S.fm==="all"?"selected":""}>All months (year so far)</option>`:""}${ms.map(x=>`<option value="${x}" ${x===(withAll?S.fm:CURM())?"selected":""}>${MN(x)}${x===CUR?" (this month)":""}</option>`).join("")}</select></label>${withChapter?`<label class="fl"><span>Your chapter</span><select data-af="chapter" aria-label="Your chapter"><option value="all">All chapters</option>${D.chapters.map(c=>`<option ${c===S.chapter?"selected":""}>${esc(c)}</option>`).join("")}</select></label>`:""}</div>`}
+function frFilters(withChapter,withAll,extra){const ms=MONTHS.filter(x=>x<=CUR);
+  return `<div class="card filters"><label class="fl"><span>Month</span><select data-af="month" aria-label="Month">${withAll?`<option value="all" ${S.fm==="all"?"selected":""}>All months (year so far)</option>`:""}${ms.map(x=>`<option value="${x}" ${x===(withAll?S.fm:CURM())?"selected":""}>${MN(x)}${x===CUR?" (this month)":""}</option>`).join("")}</select></label>${withChapter?`<label class="fl"><span>Your chapter</span><select data-af="chapter" aria-label="Your chapter"><option value="all">All chapters</option>${D.chapters.map(c=>`<option ${c===S.chapter?"selected":""}>${esc(c)}</option>`).join("")}</select></label>`:""}${extra?`<div class="fl frexp">${extra}</div>`:""}</div>`}
 function frHead(title,sub){return `<div class="frtitle"><h1 id="h-fr" tabindex="-1">${esc(title)}</h1><p>${esc(sub)}</p></div>`}
 
 function trendMini(tp,ch){const ms=dataMonths().filter(x=>x<=CUR).slice(-4);if(ms.length<2)return'<p class="amuted">Appears once there are two months of data.</p>';
@@ -1706,7 +1706,7 @@ function pointsCard(m,ch){const rules=ruleList().filter(x=>x.active&&x.points>0)
   return `<div class="acard"><h3>Points ${m==="all"?"so far this year":"this month"}</h3><p class="amuted">${esc(TXT("points_note",{max:fmtPts(sum(rules.map(x=>x.points)))}))}</p><ul class="ptl">${rows.map(x=>`<li class="${x.frac>=1?"on":x.frac>0?"part":""}"><span class="pk">${x.frac>=1?"\u2713":x.frac>0?"\u25d0":"\u25cb"}</span><span><b>${esc(x.rl.name)}</b><br><span class="amuted">${esc(x.txt)}</span></span><span class="pv">${x.pv!=null?"+"+x.pv:"up to "+fmtPts(x.rl.points)}</span></li>`).join("")}</ul></div>`}
 
 function frHome(){
-  const m=S.fm,ch=scopeCh(),rk=rankList(m);let h=blocksFor("home","top")+frFilters(true,true)+`<div class="frexp">${shareMenuHtml("fr")}</div>`;
+  const m=S.fm,ch=scopeCh(),rk=rankList(m);let h=blocksFor("home","top")+frFilters(true,true,shareMenuHtml("fr"));
   if(!ch){const A=calc(CURM(),"all"),yth=sum(A.rows.map(r=>r.youth));
     h+=`<div class="acard"><h2>${esc(TXT("fr_home_title"))}</h2><p class="amuted">${esc(TXT("fr_home_sub"))}</p><div class="kp"><div><b>${A.n}</b><span>chapters</span></div><div><b>${yth}</b><span>youth</span></div><div><b>${A.wmTot}</b><span>active Wingmen</span></div></div></div>`;
     h+=`<div class="frgrid">${TPS().map(tp=>tpCard(tp,m,null)).join("")}</div>`+pointsCard(m,null);
