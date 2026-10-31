@@ -661,7 +661,7 @@ details.more summary{list-style:none}details.more summary::-webkit-details-marke
 
   <section class="view" id="view-admin" data-id="admin" aria-labelledby="h-admin">
     <div class="page-head" data-head="admin"></div>
-    <div class="seg wrap" role="tablist" id="admTabs" aria-label="Admin sections"><button type="button" role="tab" data-a="data">Data and sync</button><button type="button" role="tab" data-a="proj">Projects</button><button type="button" role="tab" data-a="build">Builder</button><button type="button" role="tab" data-a="text">Texts</button><button type="button" role="tab" data-a="points">Points</button><button type="button" role="tab" data-a="look">Look and settings</button><button type="button" role="tab" data-a="access">Who sees what</button></div>
+    <div class="seg wrap" role="tablist" id="admTabs" aria-label="Admin sections"><button type="button" role="tab" data-a="data">Data and sync</button><button type="button" role="tab" data-a="proj">Projects</button><button type="button" role="tab" data-a="build">Builder</button><button type="button" role="tab" data-a="text">Texts</button><button type="button" role="tab" data-a="points">Points</button><button type="button" role="tab" data-a="look">Look and settings</button><button type="button" role="tab" data-a="access">Who sees what</button><button type="button" role="tab" data-a="usage">Usage</button></div>
 
     <div id="adm-data" style="margin-top:16px"><div id="pwWarn"></div>
       <div class="card">
@@ -781,6 +781,12 @@ details.more summary{list-style:none}details.more summary::-webkit-details-marke
         <div class="field"><label for="pwMid">Midfield password</label><input id="pwMid" type="password" autocomplete="new-password" placeholder="4 or more characters"></div>
         <div class="field"><label for="pwAdm">Admin password</label><input id="pwAdm" type="password" autocomplete="new-password" placeholder="4 or more characters"></div></div>
         <div class="btn-row"><button class="btn" type="button" id="pwSaveAll">Save passwords</button><button class="btn ghost" type="button" id="pwClearFr">Remove Frontline PIN</button><button class="btn ghost" type="button" id="pwClearMid">Remove Midfield password</button></div></div>
+    </div>
+    <div id="adm-usage" style="margin-top:16px" hidden>
+      <p class="lede">Who is opening the dashboard and what they look at. Each phone or laptop gets a random code, so we count people without saving names or numbers. Admin visits are not counted.</p>
+      <div class="btn-row"><div class="seg" id="usgRange" role="group" aria-label="Time range"><button type="button" data-r="1">Today</button><button type="button" data-r="7">7 days</button><button type="button" data-r="30">30 days</button><button type="button" data-r="0">All</button></div><button class="btn ghost" type="button" id="usgRefresh">Refresh</button></div>
+      <p class="small muted" id="usgStatus" style="margin-top:8px"></p>
+      <div id="usgBody"></div>
     </div>
   </section>
 
@@ -970,6 +976,7 @@ function buildNav(){
 function go(id,{focus=true}={}){
   if(gated())id="gate";else{const vs=views();if(!vs.some(v=>v.id===id))id=vs.length?vs[0].id:"gate"}
   if(location.hash.slice(1)!==id)history.replaceState(null,"","#"+id);
+  track(id);
   if(S.role==="frontline"){S.at=id;saveS();renderFrontline();window.scrollTo({top:0});return}
   const sec=id.startsWith("page:")||id.startsWith("proj:")?"custom":id;
   $$("#classic section.view").forEach(s=>s.classList.toggle("active",s.dataset.id===sec));
@@ -1456,7 +1463,7 @@ $("#btnCsv").addEventListener("click",()=>{const csv=outputRows().map(r=>r.map(c
 const CLOGK=KEY+".clog";
 const fmtClock=iso=>{try{return new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}catch(e){return"?"}};
 function clogAdd(e){const L=store.get(CLOGK,[]);L.unshift(e);store.set(CLOGK,L.slice(0,120));if(S.role==="admin"&&$("#logTbl"))renderLog()}
-const ACT_LABEL={data:["Pull","Dashboard read the sheet"],saveUpload:["Push","Attendance sent to the sheet"],saveOutput:["Push","Results table sent"],saveSettings:["Push","Settings sent"],saveTexts:["Push","Texts sent"],savePoints:["Push","Points sent"],saveConfig:["Push","Targets sent"],postCheer:["Push","Cheer posted"],exportSheet:["Push","Export created"],refreshSheet:["Push","Dashboard tab refreshed"],sendTest:["Push","Test summary sent"],sendNow:["Push","Summaries sent"],archive:["Push","Crisis and one-on-one data copied"]};
+const ACT_LABEL={data:["Pull","Dashboard read the sheet"],saveUpload:["Push","Attendance sent to the sheet"],saveOutput:["Push","Results table sent"],saveSettings:["Push","Settings sent"],saveTexts:["Push","Texts sent"],savePoints:["Push","Points sent"],saveConfig:["Push","Targets sent"],postCheer:["Push","Cheer posted"],exportSheet:["Push","Export created"],refreshSheet:["Push","Dashboard tab refreshed"],sendTest:["Push","Test summary sent"],sendNow:["Push","Summaries sent"],archive:["Push","Crisis and one-on-one data copied"],usage:["Pull","Usage data"]};
 async function api(action,payload={},write=false,fresh=false){
   if(!CFG.url)throw new Error("Paste the web app link first.");
   const t0=performance.now();let res=null,err=null;
@@ -1503,8 +1510,62 @@ setInterval(updateLive,20000);
 
 /* ===================== ADMIN: passcode, look, photos, access ===================== */
 async function sha(s){if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("mad:"+s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}let h=5381;for(const c of "mad:"+s)h=(h*33)^c.charCodeAt(0);return"x"+(h>>>0).toString(16)}
-function showAdm(){["data","proj","build","text","points","look","access"].forEach(k=>{$("#adm-"+k).hidden=S.adm!==k});$$("#admTabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.a===S.adm))}
+function showAdm(){["data","proj","build","text","points","look","access","usage"].forEach(k=>{$("#adm-"+k).hidden=S.adm!==k});$$("#admTabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.a===S.adm));if(S.adm==="usage"&&!USG.rows)loadUsage()}
 $("#admTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){S.adm=b.dataset.a;showAdm()}});
+/* ---------- usage tracking: one row per page opened, sent to the sheet ---------- */
+const DEV=(()=>{let d=store.get(KEY+".dev","");if(!d){d=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);store.set(KEY+".dev",d)}return d})();
+const pageName=id=>{const t=ATABS.find(x=>x.id===id);return t?t.title:TITLES[id]||String(id||"").replace(/^(page|proj):/,"")};
+let lastTrack="";
+function track(id,asRole){try{
+  const role=asRole||S.role||"landing";
+  if(!CFG.url||!CFG.key||location.protocol==="file:"||role==="admin"||id==="gate")return;
+  const ch=S.chapter&&S.chapter!=="all"?S.chapter:"",page=pageName(id),sig=role+"|"+page+"|"+ch;
+  if(sig===lastTrack)return;lastTrack=sig;
+  const body=JSON.stringify({action:"track",key:CFG.key,dev:DEV,role,page,chapter:ch,screen:innerWidth<760?"Phone":"Laptop"});
+  if(navigator.sendBeacon&&navigator.sendBeacon(CFG.url,new Blob([body],{type:"text/plain;charset=utf-8"})))return;
+  fetch(CFG.url,{method:"POST",mode:"no-cors",keepalive:true,headers:{"Content-Type":"text/plain;charset=utf-8"},body}).catch(()=>{})
+}catch(e){}}
+
+/* ---------- Admin: Usage tab ---------- */
+const USG={rows:null,range:7};
+async function loadUsage(){const st=$("#usgStatus");
+  if(!CFG.url){st.textContent="Connect the sheet first (Data and sync, box 2).";return}
+  if(!CFG.adminKey){st.textContent="Add the admin key in Data and sync, box 2, to see usage.";return}
+  st.textContent="Loading usage...";
+  try{const r=await api("usage",{},true);if(!r||!r.ok)throw new Error((r&&r.error)||"No answer from the sheet");
+    USG.rows=(r.rows||[]).map(x=>({t:new Date(x[0]),dev:String(x[1]),role:String(x[2]),page:String(x[3]),ch:String(x[4]),scr:String(x[5]||"")})).filter(x=>!isNaN(x.t));
+    st.textContent=`${USG.rows.length} page views loaded. Updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}.`;renderUsage()}
+  catch(e){st.textContent="Could not load usage: "+e.message+". If you have not added the usage code to the Apps Script yet, do that first."}}
+function renderUsage(){
+  $$("#usgRange button").forEach(b=>b.setAttribute("aria-selected",String(+b.dataset.r===USG.range)));
+  const el=$("#usgBody");if(!USG.rows){el.innerHTML="";return}
+  const now=new Date(),day=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(),today=day(now);
+  const from=USG.range===0?0:today-(USG.range-1)*864e5,R=USG.rows.filter(x=>x.t.getTime()>=from);
+  if(!R.length){el.innerHTML='<div class="card"><p class="muted">No visits in this period yet. Usage starts counting from the day the tracking code went live.</p></div>';return}
+  const uniq=a=>new Set(a.map(x=>x.dev)).size,count=(a,f)=>{const m={};a.forEach(x=>{const k=f(x);if(k)m[k]=(m[k]||0)+1});return Object.entries(m).sort((p,q)=>q[1]-p[1])};
+  const people=uniq(R),todayP=uniq(USG.rows.filter(x=>day(x.t)===today)),fr=uniq(R.filter(x=>x.role==="frontline")),mid=uniq(R.filter(x=>x.role==="midfield"));
+  const visits=new Set(R.map(x=>x.dev+"|"+day(x.t))).size;
+  const bars=(list,unit)=>{const max=Math.max(...list.map(x=>x[1]),1);return '<div class="bars">'+list.map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><span class="v">${v} ${unit}</span><div class="tr"><i style="width:${Math.round(v/max*100)}%;background:var(--red)"></i></div></div>`).join("")+"</div>"};
+  const pagePeople=Object.entries(R.reduce((m,x)=>{(m[x.page]=m[x.page]||new Set).add(x.dev);return m},{})).map(([k,v])=>[k,v.size]).sort((a,b)=>b[1]-a[1]);
+  const chPeople=Object.entries(R.filter(x=>x.ch).reduce((m,x)=>{(m[x.ch]=m[x.ch]||new Set).add(x.dev);return m},{})).map(([k,v])=>[k,v.size]).sort((a,b)=>b[1]-a[1]);
+  const nDays=Math.min(USG.range===0?14:Math.max(USG.range,7),14),daysArr=[...Array(nDays)].map((_,i)=>today-(nDays-1-i)*864e5);
+  const perDay=daysArr.map(d=>[new Date(d),uniq(USG.rows.filter(x=>day(x.t)===d))]),dmax=Math.max(...perDay.map(x=>x[1]),1);
+  const fmtD=d=>d.toLocaleDateString([], {day:"numeric",month:"short"}),fmtT=d=>d.toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  const allCh=D.chapters||[],seen=new Set(chPeople.map(x=>x[0])),notSeen=allCh.filter(c=>!seen.has(c));
+  el.innerHTML=`<div class="kpis k4" style="margin-top:12px">
+    <div class="stat"><b>${people}</b><span>people opened it</span></div>
+    <div class="stat"><b>${todayP}</b><span>people today</span></div>
+    <div class="stat"><b>${visits}</b><span>visits (one per person per day)</span></div>
+    <div class="stat"><b>${R.length}</b><span>pages viewed</span></div></div>
+  <div class="kpis" style="margin-top:10px"><div class="stat"><b>${fr}</b><span>people on Frontline</span></div><div class="stat"><b>${mid}</b><span>people on Midfield</span></div></div>
+  <div class="section"><div class="card"><h3>People per day</h3><div class="cols" style="margin-top:12px">${perDay.map(([d,v])=>`<div title="${fmtD(d)}: ${v}"><span>${v||""}</span><i style="height:${Math.round(v/dmax*80)}%;background:var(--red)"></i><span>${d.getDate()}</span></div>`).join("")}</div></div></div>
+  <div class="section"><div class="card"><h3>What they look at</h3><p class="muted small">People who opened each page.</p>${bars(pagePeople,"people")}</div></div>
+  <div class="section"><div class="card"><h3>Chapters being checked</h3><p class="muted small">People who looked at each chapter on Frontline.</p>${chPeople.length?bars(chPeople,"people"):'<p class="muted">No chapter picked yet in this period.</p>'}${notSeen.length?`<p class="small muted" style="margin-top:10px"><b>Not checked yet:</b> ${esc(notSeen.join(", "))}</p>`:""}</div></div>
+  <div class="section"><div class="card"><h3>Phone or laptop</h3>${bars(count(R,x=>x.scr),"views")}</div></div>
+  <div class="section"><h2>Latest activity</h2><div class="tbl"><table class="rt"><thead><tr><th>When</th><th>Person</th><th>View</th><th>Page</th><th>Chapter</th></tr></thead><tbody>${R.slice().sort((a,b)=>b.t-a.t).slice(0,30).map(x=>`<tr><td data-label="When">${fmtT(x.t)}</td><td data-label="Person">#${esc(x.dev.slice(0,5))}</td><td data-label="View">${esc(x.role)}</td><td data-label="Page">${esc(x.page)}</td><td data-label="Chapter">${esc(x.ch||"-")}</td></tr>`).join("")}</tbody></table></div></div>`}
+$("#usgRange").addEventListener("click",e=>{const b=e.target.closest("button");if(b){USG.range=+b.dataset.r;renderUsage()}});
+$("#usgRefresh").addEventListener("click",loadUsage);
+
 function renderLook(){
   $("#palList").innerHTML=Object.entries(PALS).map(([k,p])=>`<button type="button" data-pal="${k}" aria-pressed="${!SET.hex&&SET.pal===k}"><span class="sw"><i style="background:${p.red}"></i><i style="background:${p.soft}"></i><i style="background:${p.dk}"></i></span>${esc(p.n)}</button>`).join("");
   $$("#palList button").forEach(b=>b.addEventListener("click",()=>{SET.pal=b.dataset.pal;SET.hex="";saveSet();applyPalette();renderLook();toast("Template: "+PALS[SET.pal].n)}));
@@ -2028,7 +2089,7 @@ async function submitLanding(e){e.preventDefault();const r=LR,bad=m=>{$("#lErr")
 function showShell(){const fr=S.role==="frontline";$("#frontline").hidden=!fr;$("#classic").hidden=fr;applyRoleTheme()}
 function enterApp(role){S.role=role;saveS();$("#landing").hidden=true;$("#lPw").value="";showShell();buildNav();renderAll();
   const vs=views(),want=location.hash.slice(1);go(vs.some(v=>v.id===want)?want:(vs[0]?vs[0].id:"my"),{focus:false});window.scrollTo(0,0)}
-function toLanding(){try{sessionStorage.removeItem(KEY+".sess")}catch(e){}history.replaceState(null,"",location.pathname);
+function toLanding(){try{sessionStorage.removeItem(KEY+".sess")}catch(e){}history.replaceState(null,"",location.pathname);track("Landing page","landing");
   $("#classic").hidden=true;$("#frontline").hidden=true;document.documentElement.dataset.role="";$("#landing").hidden=false;fillLanding();setLandRole(LR==="frontline"&&S.role!=="frontline"?S.role:"frontline");window.scrollTo(0,0)}
 $$("#landing .role").forEach(b=>b.addEventListener("click",()=>setLandRole(b.dataset.r)));
 $("#landForm").addEventListener("submit",submitLanding);
@@ -2049,7 +2110,7 @@ function renderPwWarn(){const el=$("#pwWarn");if(!el)return;el.innerHTML=SET.pwS
   let sess=null;try{sess=sessionStorage.getItem(KEY+".sess")}catch(e){}
   if(sess&&ROLES[sess])enterApp(sess);
   else if(DIRECT&&!SET.pw.frontline)enterApp("frontline");
-  else{LR=QP.get("view")==="midfield"?"midfield":QP.get("view")==="admin"?"admin":"frontline";$("#landing").hidden=false;setLandRole(LR)}
+  else{LR=QP.get("view")==="midfield"?"midfield":QP.get("view")==="admin"?"admin":"frontline";$("#landing").hidden=false;setLandRole(LR);track("Landing page","landing")}
   setTimer();if(CFG.url)syncNow(true);
 })();
 
