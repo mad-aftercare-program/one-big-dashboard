@@ -1,15 +1,37 @@
 /* ==========================================================================
-   USAGE TRACKING for One Big Aftercare
-   Paste this whole block at the BOTTOM of Code.gs, then make the 3-line
-   change inside doPost described in STEP 2 below.
-   It uses the ACCESS_KEY, ADMIN_KEY and MASTER_ID already set at the top
-   of Code.gs.
+   USAGE TRACKING for One Big Aftercare  (Code.gs in One-Big-Aftercare-Master)
+   Three small edits. Do NOT replace the whole file: your real keys live in it.
    ========================================================================== */
 
-// Creates the "Usage Log" tab in the master sheet the first time it is needed.
+/* ---- EDIT 1 of 3 ----------------------------------------------------------
+   In function doPostInner_(e), find this line:
+
+     var viewOk = action === 'exportSheet' || action === 'postCheer';
+
+   and replace it with:
+
+     var viewOk = action === 'exportSheet' || action === 'postCheer' || action === 'track';
+*/
+
+/* ---- EDIT 2 of 3 ----------------------------------------------------------
+   In the same function, find this line:
+
+     if (action === 'ping') return json_({ ok: true });
+
+   and paste these two lines directly BELOW it:
+
+     if (action === 'track') return json_(trackUsage_(body));
+     if (action === 'usage') return json_(usageData_());
+*/
+
+/* ---- EDIT 3 of 3 ----------------------------------------------------------
+   Paste everything below at the very bottom of Code.gs.
+*/
+
+// The "Usage Log" tab in this master sheet. Created the first time it is needed.
 function usageSheet_() {
-  const ss = SpreadsheetApp.openById(MASTER_ID);
-  let sh = ss.getSheetByName('Usage Log');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Usage Log');
   if (!sh) {
     sh = ss.insertSheet('Usage Log');
     sh.appendRow(['Timestamp', 'Person (device code)', 'View', 'Page', 'Chapter', 'Screen']);
@@ -19,43 +41,25 @@ function usageSheet_() {
   return sh;
 }
 
-function usageOut_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-// Called every time someone opens a page on the dashboard. Adds one row.
+// One row each time someone opens a page on the dashboard. No names, no phone numbers.
 function trackUsage_(b) {
-  if (b.key !== ACCESS_KEY && b.key !== ADMIN_KEY) return usageOut_({ ok: false, error: 'Wrong key' });
-  const clean = v => String(v || '').slice(0, 40);
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(5000);
-    usageSheet_().appendRow([new Date(), clean(b.dev), clean(b.role), clean(b.page), clean(b.chapter), clean(b.screen)]);
-  } finally { lock.releaseLock(); }
-  return usageOut_({ ok: true });
+  var clean = function (v) { return String(v || '').slice(0, 40); };
+  usageSheet_().appendRow([new Date(), clean(b.dev), clean(b.role), clean(b.page), clean(b.chapter), clean(b.screen)]);
+  return { ok: true };
 }
 
-// Called by the Admin > Usage tab. Admin key only. Returns the last 5,000 rows.
-function usageData_(b) {
-  if (b.key !== ADMIN_KEY) return usageOut_({ ok: false, error: 'Admin key needed' });
-  const sh = usageSheet_(), last = sh.getLastRow();
-  if (last < 2) return usageOut_({ ok: true, rows: [] });
-  const start = Math.max(2, last - 4999);
-  const rows = sh.getRange(start, 1, last - start + 1, 6).getValues().map(r => [
-    r[0] instanceof Date ? r[0].toISOString() : String(r[0]), r[1], r[2], r[3], r[4], r[5]
-  ]);
-  return usageOut_({ ok: true, rows: rows });
+// For Admin > Usage on the dashboard (admin key only). Sends the latest 5,000 rows.
+function usageData_() {
+  var sh = usageSheet_(), last = sh.getLastRow();
+  if (last < 2) return { ok: true, rows: [] };
+  var start = Math.max(2, last - 4999);
+  var rows = sh.getRange(start, 1, last - start + 1, 6).getValues().map(function (r) {
+    return [r[0] instanceof Date ? r[0].toISOString() : String(r[0]), r[1], r[2], r[3], r[4], r[5]];
+  });
+  return { ok: true, rows: rows };
 }
 
-/* --------------------------------------------------------------------------
-   STEP 2: inside your existing  function doPost(e) { ... }
-   add these 3 lines as the VERY FIRST lines of the function:
-
-     const _u = JSON.parse((e.postData && e.postData.contents) || '{}');
-     if (_u.action === 'track') return trackUsage_(_u);
-     if (_u.action === 'usage') return usageData_(_u);
-
-   STEP 3: Save, then Deploy > Manage deployments > pencil (Edit) >
-   Version: "New version" > Deploy. Keep the same deployment so the
-   web app link does not change.
-   -------------------------------------------------------------------------- */
+/* ---- THEN ---------------------------------------------------------------
+   Save. Deploy > Manage deployments > pencil (Edit) > Version: New version
+   > Deploy. Keep the same deployment so the dashboard link does not change.
+*/
