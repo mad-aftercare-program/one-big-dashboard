@@ -1530,7 +1530,6 @@ function track(id,asRole){try{
 const USG={rows:null,range:7};
 async function loadUsage(){const st=$("#usgStatus");
   if(!CFG.url){st.textContent="Connect the sheet first (Data and sync, box 2).";return}
-  if(!CFG.adminKey){st.textContent="Add the admin key in Data and sync, box 2, to see usage.";return}
   st.textContent="Loading usage...";
   try{const r=await api("usage",{},true);if(!r||!r.ok)throw new Error((r&&r.error)||"No answer from the sheet");
     USG.rows=(r.rows||[]).map(x=>({t:new Date(x[0]),dev:String(x[1]),role:String(x[2]),page:String(x[3]),ch:String(x[4]),scr:String(x[5]||"")})).filter(x=>!isNaN(x.t));
