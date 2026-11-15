@@ -15,6 +15,7 @@
  *   - No emails, phone numbers, PC full names, conversation notes, crisis
  *     details, sheet links, sync log or dashboard passwords.
  *   - Crises are sent as chapter and status only (for the open-crisis count).
+ *   - Project numbers are sent as they are (they are totals, not names).
  *   It can only read. Every save still needs the access key.
  *
  * The access key never leaves this script. The add-on finds it itself by
@@ -78,7 +79,7 @@ function publicCode_(salt, v) {
   v = String(v == null ? '' : v).trim();
   if (!v) return '';
   var d = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + '|' + v), h = '';
-  for (var i = 0; i < 6; i++) h += ((d[i] + 256) % 256).toString(16).padStart(2, '0');
+  for (var i = 0; i < 6; i++) h += ('0' + ((d[i] + 256) % 256).toString(16)).slice(-2);
   return 'Y-' + h;
 }
 
@@ -116,7 +117,8 @@ function publicData_(d) {
   }
   return {
     asOf: d.asOf || '', chapters: arr(d.chapters), youth: youth, wingmen: wingmen, calendar: arr(d.calendar),
-    interactions: interactions, uploads: uploads, crises: crises, crisisLog: [], legacyCrises: [], projects: [],
+    interactions: interactions, uploads: uploads, crises: crises, crisisLog: [], legacyCrises: [],
+    projects: arr(d.projects).map(function (r) { return { project: r.project, metric: r.metric, chapter: r.chapter, month: r.month, value: r.value, target: r.target }; }),
     texts: d.texts || {}, cheers: arr(d.cheers), rules: arr(d.rules), config: d.config || {}, ageCounts: d.ageCounts || null,
     settings: settings
   };

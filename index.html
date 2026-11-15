@@ -1465,7 +1465,7 @@ const fmtClock=iso=>{try{return new Date(iso).toLocaleTimeString("en-GB",{hour:"
 function clogAdd(e){const L=store.get(CLOGK,[]);L.unshift(e);store.set(CLOGK,L.slice(0,120));if(S.role==="admin"&&$("#logTbl"))renderLog()}
 const ACT_LABEL={data:["Pull","Dashboard read the sheet"],saveUpload:["Push","Attendance sent to the sheet"],saveOutput:["Push","Results table sent"],saveSettings:["Push","Settings sent"],saveTexts:["Push","Texts sent"],savePoints:["Push","Points sent"],saveConfig:["Push","Targets sent"],postCheer:["Push","Cheer posted"],exportSheet:["Push","Export created"],refreshSheet:["Push","Dashboard tab refreshed"],sendTest:["Push","Test summary sent"],sendNow:["Push","Summaries sent"],archive:["Push","Crisis and one-on-one data copied"],usage:["Pull","Usage data"]};
 /* Read-only link to the master sheet: any device without a saved connection loads the numbers from here, with names taken out by the sheet. */
-const PUBLIC_API="";
+const PUBLIC_API="https://script.google.com/macros/s/AKfycbx0h90fpn7z_iBfnCRmGuIYJ4SCFeK5ix5llF1wZPqxT4OoMBl6HUucvblExoWIv7aJ/exec";
 const PUB=()=>!CFG.url&&!!PUBLIC_API, LIVE=()=>!!(CFG.url||PUBLIC_API);
 async function api(action,payload={},write=false,fresh=false){
   if(action==="data"&&PUB()){const t0=performance.now();let res=null,err=null;try{const r=await fetch(PUBLIC_API+(PUBLIC_API.includes("?")?"&":"?")+"action=public"+(fresh?"&fresh=1":""));res=await r.json()}catch(e){err=e}
