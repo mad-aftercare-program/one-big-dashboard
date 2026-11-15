@@ -1464,7 +1464,12 @@ const CLOGK=KEY+".clog";
 const fmtClock=iso=>{try{return new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}catch(e){return"?"}};
 function clogAdd(e){const L=store.get(CLOGK,[]);L.unshift(e);store.set(CLOGK,L.slice(0,120));if(S.role==="admin"&&$("#logTbl"))renderLog()}
 const ACT_LABEL={data:["Pull","Dashboard read the sheet"],saveUpload:["Push","Attendance sent to the sheet"],saveOutput:["Push","Results table sent"],saveSettings:["Push","Settings sent"],saveTexts:["Push","Texts sent"],savePoints:["Push","Points sent"],saveConfig:["Push","Targets sent"],postCheer:["Push","Cheer posted"],exportSheet:["Push","Export created"],refreshSheet:["Push","Dashboard tab refreshed"],sendTest:["Push","Test summary sent"],sendNow:["Push","Summaries sent"],archive:["Push","Crisis and one-on-one data copied"],usage:["Pull","Usage data"]};
+/* Read-only link to the master sheet: any device without a saved connection loads the numbers from here, with names taken out by the sheet. */
+const PUBLIC_API="";
+const PUB=()=>!CFG.url&&!!PUBLIC_API, LIVE=()=>!!(CFG.url||PUBLIC_API);
 async function api(action,payload={},write=false,fresh=false){
+  if(action==="data"&&PUB()){const t0=performance.now();let res=null,err=null;try{const r=await fetch(PUBLIC_API+(PUBLIC_API.includes("?")?"&":"?")+"action=public"+(fresh?"&fresh=1":""));res=await r.json()}catch(e){err=e}
+    clogAdd({when:new Date().toISOString(),where:"device",dir:"Pull",what:"Public numbers",detail:err?"Failed: "+err.message:res&&res.ok===false?"Refused: "+(res.error||""):"OK",ms:Math.round(performance.now()-t0),ok:!err&&!(res&&res.ok===false)});if(err)throw err;return res}
   if(!CFG.url)throw new Error("Paste the web app link first.");
   const t0=performance.now();let res=null,err=null;
   try{
@@ -1486,7 +1491,7 @@ async function syncNow(quiet,fresh){
     D.builtAt=r.builtAt||"";D.src=r.src||"";D.syncLog=Array.isArray(r.data.syncLog)?r.data.syncLog:[];LASTSYNC=Date.now();
     CFG.last=new Date().toISOString();store.set(KEY+".cfg",CFG);buildNav();renderAll();updateLive();
     setStatus(`Synced ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}.${r.notes&&r.notes.length?" "+r.notes.join(" "):""}`);
-    if(!quiet)toast("Dashboard is up to date");if(CFG.save&&S.role==="admin"&&!gated())saveToSheet(true)}
+    if(!quiet)toast("Dashboard is up to date");if(CFG.url&&CFG.save&&S.role==="admin"&&!gated())saveToSheet(true)}
   catch(e){setStatus("Could not sync: "+e.message+" Check the link and key.",true)}}
 async function saveToSheet(quiet){
   try{const un=LOCAL.filter(u=>!u.saved&&!GONE.includes(u.id));
@@ -1498,11 +1503,11 @@ async function saveSettingsToSheet(){try{const r=await api("saveSettings",{setti
 $("#btnSync").addEventListener("click",()=>syncNow(false,true));
 $("#btnSave").addEventListener("click",()=>saveToSheet());
 $("#setSave").addEventListener("click",saveSettingsToSheet);
-let timer=null,LASTSYNC=0;function setTimer(){clearInterval(timer);if(+CFG.auto&&CFG.url)timer=setInterval(()=>syncNow(true),CFG.auto*60000)}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&CFG.url&&Date.now()-LASTSYNC>120000)syncNow(true)});
+let timer=null,LASTSYNC=0;function setTimer(){clearInterval(timer);if(+CFG.auto&&LIVE())timer=setInterval(()=>syncNow(true),CFG.auto*60000)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&LIVE()&&Date.now()-LASTSYNC>120000)syncNow(true)});
 /* ----- "how live is this?" line, shown on every page ----- */
 const agoText=ms=>{const m=Math.round(ms/60000);return m<1?"just now":m===1?"1 minute ago":m<60?m+" minutes ago":Math.round(m/60)+" hour"+(Math.round(m/60)===1?"":"s")+" ago"};
-function liveText(){if(!CFG.url)return"Showing saved numbers"+(D.asOf?" from "+fmtD(D.asOf):"")+". Not connected to the sheet yet.";
+function liveText(){if(PUB())return LASTSYNC?`Live from the sheet, names hidden. Checked ${agoText(Date.now()-LASTSYNC)}${D.builtAt?`, data as of ${fmtClock(D.builtAt)}`:""}.`:"Loading the latest numbers...";if(!CFG.url)return"Showing saved numbers"+(D.asOf?" from "+fmtD(D.asOf):"")+". Not connected to the sheet yet.";
   const every=+CFG.auto?`Checks the sheet ${+CFG.auto===1?"every minute":"every "+CFG.auto+" minutes"}.`:"Updates when someone taps Sync.";
   return LASTSYNC?`Live from the sheet. Checked ${agoText(Date.now()-LASTSYNC)}${D.builtAt?`, data as of ${fmtClock(D.builtAt)}`:""}. ${every}`:"Connecting to the sheet..."}
 function updateLive(){$$(".liveNote").forEach(el=>el.textContent=liveText())}
@@ -2110,7 +2115,7 @@ function renderPwWarn(){const el=$("#pwWarn");if(!el)return;el.innerHTML=SET.pwS
   if(sess&&ROLES[sess])enterApp(sess);
   else if(DIRECT&&!SET.pw.frontline)enterApp("frontline");
   else{LR=QP.get("view")==="midfield"?"midfield":QP.get("view")==="admin"?"admin":"frontline";$("#landing").hidden=false;setLandRole(LR);track("Landing page","landing")}
-  setTimer();if(CFG.url)syncNow(true);
+  setTimer();if(LIVE())syncNow(true);
 })();
 
 </script>
